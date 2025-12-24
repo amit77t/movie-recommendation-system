@@ -2,50 +2,61 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-df = pd.read_csv("../dataset/top10K-TMDB-movies.csv")
-
-df = df[['title','genre','overview','popularity','vote_average']]
-df['genre'] = df['genre'].fillna("")
-df['overview'] = df['overview'].fillna("")
-
-df['content'] = df['genre'] + " " + df['overview']
-
-tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
-tfidf_matrix = tfidf.fit_transform(df['content'])
-
-cosine_sim = cosine_similarity(tfidf_matrix)
+import os
+# Lazy-loaded globals
+df = None
+tfidf = None
+cosine_sim = None
 
 
-def content_recommend(movie_title, top_n=10):
-    movie_title = movie_title.lower().strip()
+def load_ml():
+    """
+    Load dataset and ML objects only once (lazy loading).
+    Prevents high memory usage during server startup.
+    """
+    global df, tfidf, cosine_sim
 
-    df['title_lower'] = df['title'].str.lower()
+    if df is None:
+        print("📥 Loading ML dataset and model...")
 
-    # 🔹 Try partial match
-    matches = df[df['title_lower'].str.contains(movie_title, na=False)]
+        # df = pd.read_csv("dataset/top10K-TMDB-movies.csv")
+         
 
-    # 🔹 If no match found → return popular movies (fallback)
-    if matches.empty:
-        popular = df.sort_values(
-            by=["vote_average", "popularity"],
-            ascending=False
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        DATASET_PATH = os.path.join(BASE_DIR, "dataset", "top10K-TMDB-movies.csv")
+
+        df = pd.read_csv(DATASET_PATH)
+
+        # Combine text features
+        df["combined"] = (
+            df["title"].fillna("") + " " +
+            df["genre"].fillna("") + " " +
+            df["overview"].fillna("")
         )
-        return popular.head(top_n)
 
-    # 🔹 Use first matching movie
-    idx = matches.index[0]
+        tfidf = TfidfVectorizer(stop_words="english")
+        tfidf_matrix = tfidf.fit_transform(df["combined"])
 
-    scores = list(enumerate(cosine_sim[idx]))
-    scores = sorted(scores, key=lambda x: x[1], reverse=True)
+        cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
-    indices = [i[0] for i in scores[1:top_n+1]]
-    return df.iloc[indices]
+        print("✅ ML loaded successfully")
 
 
+def content_recommend(title: str):
+    load_ml()  # 👈 LAZY LOAD HERE
 
+    title = title.lower()
+    df["title_lower"] = df["title"].str.lower()
 
-def trending_movies(top_n=10):
-    return df.sort_values(
-        by=['vote_average','popularity'],
-        ascending=False
-    ).head(top_n)
+    # Cold start fallback
+    if title not in df["title_lower"].values:
+        return df.sort_values("vote_average", ascending=False).head(10)
+
+    idx = df[df["title_lower"] == title].index[0]
+
+    similarity_scores = list(enumerate(cosine_sim[idx]))
+    similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)[1:11]
+
+    movie_indices = [i[0] for i in similarity_scores]
+
+    return df.iloc[movie_indices][["title", "genre", "vote_average"]]

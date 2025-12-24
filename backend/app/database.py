@@ -1,15 +1,13 @@
 import os
-from pymongo import MongoClient 
+from pymongo import MongoClient
 
-
-# Change this if using MongoDB Atlas
 MONGO_URL = os.getenv("MONGO_URI")
 
-
-
+if not MONGO_URL:
+    raise ValueError("MONGO_URI not set in environment")
 
 client = MongoClient(MONGO_URL)
-db = client.movie_recommender
+db = client.movieDB
 
 users_collection = db.users
 ratings_collection = db.ratings

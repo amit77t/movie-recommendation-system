@@ -1,9 +1,14 @@
 from fastapi import APIRouter
 import pandas as pd
 
+import os
+
 router = APIRouter(prefix="/movies", tags=["Movies"])
 
-df = pd.read_csv("../dataset/top10K-TMDB-movies.csv")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+DATASET_PATH = os.path.join(BASE_DIR, "dataset", "top10K-TMDB-movies.csv")
+
+df = pd.read_csv(DATASET_PATH)
 
 @router.get("/")
 def get_movies():

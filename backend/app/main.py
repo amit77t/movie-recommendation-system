@@ -1,15 +1,19 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, movies, ratings, recommend, history
 from dotenv import load_dotenv
 load_dotenv()
 
 
-app = FastAPI()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routes import auth, movies, ratings, recommend, history
+
+
+
+app = FastAPI(title="AI Movie Recommendation System")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],   # restrict later if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
