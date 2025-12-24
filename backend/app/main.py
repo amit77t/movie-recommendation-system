@@ -13,7 +13,8 @@ app = FastAPI(title="AI Movie Recommendation System")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # restrict later if needed
+    allow_origins=["http://localhost:5173",
+        "https://movie-recommendation-system-six-tawny.vercel.app"],   # restrict later if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
